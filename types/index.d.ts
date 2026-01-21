@@ -78,6 +78,37 @@ export interface IpInfo {
     zipcode?: string;
     state?: string;
 }
+
+export interface NetworkDiagnostics {
+    connectionStatus: {
+        isConnectedToInternet: boolean;
+        isConnectedToWifi: boolean;
+        connectionType: string;
+        isWifiEnabled: boolean;
+    };
+    wifiDetails: {
+        ssid: string;
+        bssid: string;
+        ipAddress: string;
+        macAddress: string;
+        linkSpeed: number;
+        linkSpeedUnit: string;
+        rssi: number;
+        frequency: number;
+        channel: number;
+        gateway: string;
+        dns1: string;
+        dns2: string;
+        networkId: number;
+        signalLevel: number;
+        signalQuality: string;
+    } | null;
+    performance: {
+        healthScore: number;
+        status: string;
+    };
+}
+
 export default class WifiManager {
     getWifiList(): Promise<WifiNetwork[]>;
     getIpInfo(): Promise<IpInfo[]>;
@@ -94,5 +125,6 @@ export default class WifiManager {
     getWifiStrength(): Promise<number>;
     getSignalStrength(): Promise<number>;
     ping(address: string, count: number, timeout: number, successCallback: (response: PingResponse) => void, errorCallback: (error: any) => void): void;
+    getNetworkDiagnostics(): Promise<NetworkDiagnostics>;
 
 }

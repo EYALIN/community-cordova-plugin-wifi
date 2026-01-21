@@ -1,8 +1,8 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0.11" encoding="UTF-8"?>
 
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
         id="community-cordova-plugin-wifi"
-        version="1.0.7">
+        version="1.0.11">
     <name>Cordova Plugin Wifi</name>
     <description></description>
     <license>MIT</license>
@@ -13,8 +13,6 @@
     <!-- android -->
     <platform name="android">
         <config-file target="AndroidManifest.xml" parent="/*">
-            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-            <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
             <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
             <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
             <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
@@ -37,7 +35,6 @@
 
         <source-file src="src/android/WifiPlugin.java" target-dir="src/android" />
         <source-file src="src/android/IpInfoUtils.java" target-dir="src/android" />
-        <source-file src="src/android/PingTask.java" target-dir="src/android" />
         <source-file src="src/android/WifiDetailsUtils.java" target-dir="src/android" />
         <source-file src="src/android/WifiUtils.java" target-dir="src/android" />
     </platform>
@@ -54,10 +51,10 @@
             </feature>
         </config-file>
 
-        <config-file target="*-Info.plist" parent="NSLocationWhenInUseUsageDescription">
+        <config-file target="App/App-Info.plist" parent="NSLocationWhenInUseUsageDescription">
             <string>Your location is used to access WiFi information.</string>
         </config-file>
-        <config-file target="*-Info.plist" parent="NSLocationAlwaysAndWhenInUseUsageDescription">
+        <config-file target="App/App-Info.plist" parent="NSLocationAlwaysAndWhenInUseUsageDescription">
             <string>Your location is used to access WiFi information even when the app is in the background.</string>
         </config-file>
 

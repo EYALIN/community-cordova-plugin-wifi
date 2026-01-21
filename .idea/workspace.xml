@@ -8,7 +8,10 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/plugin.xml" beforeDir="false" afterPath="$PROJECT_DIR$/plugin.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/android/PingTask.java" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/android/WifiPlugin.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/android/WifiPlugin.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/types/index.d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/types/index.d.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/www/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/www/plugin.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -24,14 +27,12 @@
     &quot;assignee&quot;: &quot;EYALIN&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings">
-    <option name="selectedUrlAndAccountId">
-      <UrlAndAccount>
-        <option name="accountId" value="554cb47e-af38-4ebf-8263-4816fa246779" />
-        <option name="url" value="https://github.com/EYALIN/community-cordova-plugin-cpu.git" />
-      </UrlAndAccount>
-    </option>
-  </component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/EYALIN/community-cordova-plugin-cpu.git&quot;,
+    &quot;accountId&quot;: &quot;554cb47e-af38-4ebf-8263-4816fa246779&quot;
+  }
+}</component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
@@ -48,6 +49,7 @@
   &quot;keyToString&quot;: {
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;last_opened_file_path&quot;: &quot;/Volumes/Development/Git/forked/community-cordova-plugin-wifi/src/android&quot;,
@@ -57,7 +59,7 @@
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;preferences.lookFeel&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;/Applications/WebStorm.app/Contents/plugins/javascript-impl/jsLanguageServicesImpl/external&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;/Applications/WebStorm.app/Contents/plugins/javascript-plugin/jsLanguageServicesImpl/external&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
@@ -69,6 +71,13 @@
       <recent name="$PROJECT_DIR$/src/ios" />
       <recent name="$PROJECT_DIR$/src" />
     </key>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-09060db00ec0-JavaScript-WS-251.29188.1" />
+      </set>
+    </attachedChunks>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
@@ -103,7 +112,11 @@
       <workItem from="1724268174858" duration="4603000" />
       <workItem from="1725518446319" duration="57000" />
       <workItem from="1725611591287" duration="21000" />
-      <workItem from="1731667624026" duration="1127000" />
+      <workItem from="1731667624026" duration="1162000" />
+      <workItem from="1751262475820" duration="4500000" />
+      <workItem from="1768033742670" duration="45000" />
+      <workItem from="1768033992593" duration="17000" />
+      <workItem from="1768035366231" duration="829000" />
     </task>
     <task id="LOCAL-00001" summary="update plugin">
       <option name="closed" value="true" />
@@ -201,7 +214,15 @@
       <option name="project" value="LOCAL" />
       <updated>1723350242605</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="* add export to all interfaces">
+      <option name="closed" value="true" />
+      <created>1731669745130</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1731669745130</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

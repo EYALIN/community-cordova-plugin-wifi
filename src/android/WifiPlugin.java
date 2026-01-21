@@ -2,6 +2,7 @@ package wifiplugin;
 
 import android.content.Context;
 import android.net.ConnectivityManager;
+import android.net.DhcpInfo;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
@@ -10,6 +11,7 @@ import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
+import android.text.format.Formatter;
 import androidx.annotation.RequiresApi;
 import android.net.wifi.WifiNetworkSpecifier;
 import android.net.NetworkSpecifier;
@@ -39,7 +41,7 @@ public class WifiPlugin extends CordovaPlugin {
             String address = args.getString(0);
             int count = args.getInt(1);
             int timeout = args.getInt(2);
-            PingTask.ping(address, count, timeout, callbackContext, cordova);
+//             PingTask.ping(address, count, timeout, callbackContext, cordova);
             return true;
         } else if ("getIpInfo".equals(action)) {
             IpInfoUtils.getIpInfo(cordova, callbackContext);
@@ -78,6 +80,9 @@ public class WifiPlugin extends CordovaPlugin {
             return true;
         } else if ("wifiToggle".equals(action)) {
             wifiToggle(callbackContext);
+            return true;
+        } else if ("getNetworkDiagnostics".equals(action)) {
+            getNetworkDiagnostics(callbackContext);
             return true;
         }
         return false;
@@ -278,5 +283,146 @@ WifiManager wifiManager = (WifiManager) cordova.getActivity().getApplicationCont
 
         wifiManager.disconnect();
         callbackContext.success("Disconnected from Wi-Fi network");
+    }
+
+    private void getNetworkDiagnostics(CallbackContext callbackContext) {
+        cordova.getThreadPool().execute(() -> {
+            try {
+                JSONObject diagnostics = new JSONObject();
+                Context context = cordova.getActivity().getApplicationContext();
+
+                // Get connectivity information
+                ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+                WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+
+                // Connection status
+                JSONObject connectionStatus = new JSONObject();
+                boolean isConnectedToInternet = false;
+                boolean isConnectedToWifi = false;
+                String connectionType = "None";
+
+                if (connectivityManager != null) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        Network network = connectivityManager.getActiveNetwork();
+                        if (network != null) {
+                            NetworkCapabilities networkCapabilities = connectivityManager.getNetworkCapabilities(network);
+                            if (networkCapabilities != null) {
+                                isConnectedToInternet = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                                                       networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+                                isConnectedToWifi = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI);
+
+                                if (isConnectedToWifi) {
+                                    connectionType = "WiFi";
+                                } else if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                                    connectionType = "Cellular";
+                                } else if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) {
+                                    connectionType = "VPN";
+                                } else if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
+                                    connectionType = "Ethernet";
+                                }
+                            }
+                        }
+                    } else {
+                        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+                        isConnectedToInternet = activeNetworkInfo != null && activeNetworkInfo.isConnected();
+                        if (activeNetworkInfo != null) {
+                            connectionType = activeNetworkInfo.getTypeName();
+                            isConnectedToWifi = activeNetworkInfo.getType() == ConnectivityManager.TYPE_WIFI;
+                        }
+                    }
+                }
+
+                connectionStatus.put("isConnectedToInternet", isConnectedToInternet);
+                connectionStatus.put("isConnectedToWifi", isConnectedToWifi);
+                connectionStatus.put("connectionType", connectionType);
+                connectionStatus.put("isWifiEnabled", wifiManager != null && wifiManager.isWifiEnabled());
+                diagnostics.put("connectionStatus", connectionStatus);
+
+                // WiFi details (if connected)
+                if (isConnectedToWifi && wifiManager != null) {
+                    WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+                    DhcpInfo dhcpInfo = wifiManager.getDhcpInfo();
+
+                    JSONObject wifiDetails = new JSONObject();
+                    wifiDetails.put("ssid", wifiInfo.getSSID().replace("\"", ""));
+                    wifiDetails.put("bssid", wifiInfo.getBSSID());
+                    wifiDetails.put("ipAddress", Formatter.formatIpAddress(wifiInfo.getIpAddress()));
+                    wifiDetails.put("macAddress", wifiInfo.getMacAddress());
+                    wifiDetails.put("linkSpeed", wifiInfo.getLinkSpeed());
+                    wifiDetails.put("linkSpeedUnit", "Mbps");
+                    wifiDetails.put("rssi", wifiInfo.getRssi());
+                    wifiDetails.put("frequency", wifiInfo.getFrequency());
+                    wifiDetails.put("channel", getChannelFromFrequency(wifiInfo.getFrequency()));
+                    wifiDetails.put("gateway", Formatter.formatIpAddress(dhcpInfo.gateway));
+                    wifiDetails.put("dns1", Formatter.formatIpAddress(dhcpInfo.dns1));
+                    wifiDetails.put("dns2", Formatter.formatIpAddress(dhcpInfo.dns2));
+                    wifiDetails.put("networkId", wifiInfo.getNetworkId());
+
+                    // Signal quality
+                    int signalLevel = WifiManager.calculateSignalLevel(wifiInfo.getRssi(), 5);
+                    String signalQuality;
+                    if (signalLevel >= 4) signalQuality = "excellent";
+                    else if (signalLevel >= 3) signalQuality = "good";
+                    else if (signalLevel >= 2) signalQuality = "fair";
+                    else signalQuality = "poor";
+                    wifiDetails.put("signalLevel", signalLevel);
+                    wifiDetails.put("signalQuality", signalQuality);
+
+                    diagnostics.put("wifiDetails", wifiDetails);
+                } else {
+                    diagnostics.put("wifiDetails", JSONObject.NULL);
+                }
+
+                // Network performance indicators
+                JSONObject performance = new JSONObject();
+                if (isConnectedToWifi && wifiManager != null) {
+                    WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+                    int rssi = wifiInfo.getRssi();
+                    int linkSpeed = wifiInfo.getLinkSpeed();
+
+                    // Overall network health score (0-100)
+                    int healthScore = 0;
+                    if (rssi >= -50) healthScore += 40;
+                    else if (rssi >= -60) healthScore += 30;
+                    else if (rssi >= -70) healthScore += 20;
+                    else healthScore += 10;
+
+                    if (linkSpeed >= 100) healthScore += 40;
+                    else if (linkSpeed >= 50) healthScore += 30;
+                    else if (linkSpeed >= 20) healthScore += 20;
+                    else healthScore += 10;
+
+                    if (isConnectedToInternet) healthScore += 20;
+
+                    performance.put("healthScore", healthScore);
+
+                    // Determine status
+                    String status;
+                    if (healthScore >= 80) status = "excellent";
+                    else if (healthScore >= 60) status = "good";
+                    else if (healthScore >= 40) status = "fair";
+                    else status = "poor";
+                    performance.put("status", status);
+                } else {
+                    performance.put("healthScore", 0);
+                    performance.put("status", "disconnected");
+                }
+                diagnostics.put("performance", performance);
+
+                callbackContext.success(diagnostics);
+            } catch (Exception e) {
+                Log.e(TAG, "Error getting network diagnostics", e);
+                callbackContext.error("Error getting network diagnostics: " + e.getMessage());
+            }
+        });
+    }
+
+    private int getChannelFromFrequency(int frequency) {
+        if (frequency >= 2412 && frequency <= 2484) {
+            return (frequency - 2412) / 5 + 1;
+        } else if (frequency >= 5170 && frequency <= 5825) {
+            return (frequency - 5170) / 5 + 34;
+        }
+        return -1;
     }
 }

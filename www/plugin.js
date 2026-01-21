@@ -96,6 +96,16 @@ class WifiManager {
             exec(resolve, reject, PLUGIN_NAME, 'getConnectedDevices', []);
         });
     }
+
+    /**
+     * Get comprehensive network diagnostics
+     * @returns {Promise<Object>} Network diagnostic information including connection status, WiFi details, and performance metrics
+     */
+    getNetworkDiagnostics() {
+        return new Promise((resolve, reject) => {
+            exec(resolve, reject, PLUGIN_NAME, 'getNetworkDiagnostics', []);
+        });
+    }
 }
 
 module.exports = new WifiManager();
