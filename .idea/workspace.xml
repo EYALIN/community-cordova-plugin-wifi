@@ -6,12 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="5a269414-5baa-4c38-b2f3-50c21d305b88" name="Changes" comment="* add export to all interfaces">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/plugin.xml" beforeDir="false" afterPath="$PROJECT_DIR$/plugin.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/android/PingTask.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/android/WifiPlugin.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/android/WifiPlugin.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/types/index.d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/types/index.d.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/www/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/www/plugin.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -49,9 +43,12 @@
   &quot;keyToString&quot;: {
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
     &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;javascript.preferred.runtime.type.id&quot;: &quot;node&quot;,
     &quot;last_opened_file_path&quot;: &quot;/Volumes/Development/Git/forked/community-cordova-plugin-wifi/src/android&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
@@ -75,7 +72,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-09060db00ec0-JavaScript-WS-251.29188.1" />
+        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-WS-253.29346.242" />
       </set>
     </attachedChunks>
   </component>
@@ -117,6 +114,8 @@
       <workItem from="1768033742670" duration="45000" />
       <workItem from="1768033992593" duration="17000" />
       <workItem from="1768035366231" duration="829000" />
+      <workItem from="1771016601555" duration="6000" />
+      <workItem from="1771017769828" duration="1176000" />
     </task>
     <task id="LOCAL-00001" summary="update plugin">
       <option name="closed" value="true" />

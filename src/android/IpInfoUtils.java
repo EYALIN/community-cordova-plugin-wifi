@@ -100,7 +100,7 @@ public class IpInfoUtils {
 
     private static void initializeIpInfoObject(JSONObject ipInfoObject) {
         try {
-            ipInfoObject.put("networkType", "UNKNOWN");
+            ipInfoObject.put("type", "UNKNOWN");
             ipInfoObject.put("signal", -1);
             ipInfoObject.put("speed", "UNKNOWN");
             ipInfoObject.put("ssid", "UNKNOWN");
