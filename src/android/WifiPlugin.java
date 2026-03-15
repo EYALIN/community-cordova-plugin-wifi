@@ -33,50 +33,46 @@ public class WifiPlugin extends CordovaPlugin {
     private static final int MY_PERMISSIONS_REQUEST_WIFI_STATE = 1;
 
     @Override
-    public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+    public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
         if ("getWifiList".equals(action)) {
-            WifiUtils.getWifiList(cordova, callbackContext);
+            cordova.getThreadPool().execute(() -> WifiUtils.getWifiList(cordova, callbackContext));
             return true;
         } else if ("ping".equals(action)) {
-            String address = args.getString(0);
-            int count = args.getInt(1);
-            int timeout = args.getInt(2);
-//             PingTask.ping(address, count, timeout, callbackContext, cordova);
             return true;
         } else if ("getIpInfo".equals(action)) {
-            IpInfoUtils.getIpInfo(cordova, callbackContext);
+            cordova.getThreadPool().execute(() -> IpInfoUtils.getIpInfo(cordova, callbackContext));
             return true;
         } else if ("getSignalStrength".equals(action)) {
-            getSignalStrength(callbackContext);
+            cordova.getThreadPool().execute(() -> getSignalStrength(callbackContext));
             return true;
         } else if ("getWifiStrength".equals(action)) {
-            getWifiStrength(callbackContext);
+            cordova.getThreadPool().execute(() -> getWifiStrength(callbackContext));
             return true;
         } else if ("getAllWifiDetails".equals(action)) {
-            WifiDetailsUtils.getAllWifiDetails(cordova, callbackContext);
+            cordova.getThreadPool().execute(() -> WifiDetailsUtils.getAllWifiDetails(cordova, callbackContext));
             return true;
         } else if ("getConnectedDevices".equals(action)) {
-            WifiUtils.getConnectedDevices(cordova.getActivity().getApplicationContext(), cordova, callbackContext);
+            cordova.getThreadPool().execute(() -> WifiUtils.getConnectedDevices(cordova.getActivity().getApplicationContext(), cordova, callbackContext));
             return true;
         } else if ("isConnectedToInternet".equals(action)) {
-            isConnectedToInternet(callbackContext);
+            cordova.getThreadPool().execute(() -> isConnectedToInternet(callbackContext));
             return true;
         } else if ("canConnectToInternet".equals(action)) {
-            canConnectToInternet(callbackContext);
+            cordova.getThreadPool().execute(() -> canConnectToInternet(callbackContext));
             return true;
         } else if ("canConnectToRouter".equals(action)) {
-            canConnectToRouter(callbackContext);
+            cordova.getThreadPool().execute(() -> canConnectToRouter(callbackContext));
             return true;
         } else if ("connectToNetwork".equals(action)) {
             String ssid = args.optString(0);
             String password = args.optString(1);
-            connectToWifi(ssid, password, callbackContext);
+            cordova.getThreadPool().execute(() -> connectToWifi(ssid, password, callbackContext));
             return true;
         } else if ("disconnectFromNetwork".equals(action)) {
-            disconnectFromNetwork(callbackContext);
+            cordova.getThreadPool().execute(() -> disconnectFromNetwork(callbackContext));
             return true;
         } else if ("isWifiEnabled".equals(action)) {
-            isWifiEnabled(callbackContext);
+            cordova.getThreadPool().execute(() -> isWifiEnabled(callbackContext));
             return true;
         } else if ("wifiToggle".equals(action)) {
             wifiToggle(callbackContext);
