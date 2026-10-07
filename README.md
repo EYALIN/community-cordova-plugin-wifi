@@ -110,15 +110,25 @@ WifiPlugin.getAllWifiDetails().then(details => {
 Reading the real SSID/BSSID on iOS needs three things the **consuming app** must provide — a
 plugin cannot grant any of them on its own:
 
-1. **The "Access WiFi Information" capability on the App ID.** In the Apple Developer portal
-   (Certificates, Identifiers & Profiles > Identifiers > your App ID), enable **Access WiFi
-   Information**, then regenerate/download the provisioning profile used to sign the app.
-   This plugin's `plugin.xml` writes the `com.apple.developer.networking.wifi-info`
-   entitlement key into the generated Xcode project's `Entitlements-Debug.plist` /
-   `Entitlements-Release.plist`, and links `NetworkExtension.framework` - but the entitlement
-   is only *honored* by Apple's signing/provisioning if the capability is also turned on for
-   that App ID. Without it, `getAllWifiDetails` returns `"Unavailable"` with
-   `reason: "no_wifi_or_entitlement"` even on a real device connected to Wi-Fi.
+1. **The "Access WiFi Information" entitlement, opted in.** The entitlement is **off by
+   default** (since 1.1.0), so apps that never read the SSID on iOS don't carry an unused
+   capability. Opt in when installing the plugin:
+
+   ```bash
+   cordova plugin add community-cordova-plugin-wifi --variable WIFI_INFO_ENTITLEMENT=true
+   ```
+
+   (or add `<preference name="WIFI_INFO_ENTITLEMENT" value="true" />` to `config.xml`). An
+   `after_prepare` hook then writes the `com.apple.developer.networking.wifi-info` key into the
+   generated Xcode project's `Entitlements-Debug.plist` / `Entitlements-Release.plist`; with the
+   variable off it removes the key. `NetworkExtension.framework` is always linked (a system
+   framework, no capability needed).
+   **Also enable the capability on the App ID.** In the Apple Developer portal (Certificates,
+   Identifiers & Profiles > Identifiers > your App ID), enable **Access WiFi Information**, then
+   regenerate the provisioning profile (automatic signing with `-allowProvisioningUpdates` can
+   do this for you). The entitlement is only honored if the App ID has the capability. Without
+   both, `getAllWifiDetails` returns `"Unavailable"` with `reason: "no_wifi_or_entitlement"`
+   even on a real device connected to Wi-Fi.
 2. **Foreground ("When In Use") location authorization.** As of 1.1.0, `getAllWifiDetails`
    requests this itself the first time it's called if the status is not yet determined (via
    `CLLocationManager`), and waits for the user's answer before resolving - it no longer

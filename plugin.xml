@@ -60,20 +60,15 @@
 
         <!--
           NEHotspotNetwork (used to read SSID/BSSID/signalStrength/isSecure) requires the
-          "Access WiFi Information" entitlement. This config-file writes the entitlement key
-          into the generated project's Entitlements plists, but a plugin CANNOT grant the
-          capability itself: the consuming app's App ID must also have "Access WiFi
-          Information" enabled in the Apple Developer portal (Certificates, Identifiers &
-          Profiles > the app's App ID > Capabilities), and the matching provisioning
-          profile/signing must be regenerated. Without that, SSID/BSSID stay "Unavailable"
-          even though the entitlement key is present in the built app - see README.
+          "Access WiFi Information" entitlement. It is OPT-IN so apps that never read the SSID
+          on iOS don't get an unused capability: install with
+          `--variable WIFI_INFO_ENTITLEMENT=true` and the after_prepare hook writes
+          com.apple.developer.networking.wifi-info into Entitlements-Debug/Release.plist.
+          The App ID must also have "Access WiFi Information" enabled in the Apple Developer
+          portal - a plugin cannot grant the capability itself. See README.
         -->
-        <config-file target="App/Entitlements-Debug.plist" parent="com.apple.developer.networking.wifi-info">
-            <true/>
-        </config-file>
-        <config-file target="App/Entitlements-Release.plist" parent="com.apple.developer.networking.wifi-info">
-            <true/>
-        </config-file>
+        <preference name="WIFI_INFO_ENTITLEMENT" default="false" />
+        <hook type="after_prepare" src="hooks/ios-wifi-info-entitlement.js" />
 
         <framework src="NetworkExtension.framework" />
 
