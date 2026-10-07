@@ -82,7 +82,7 @@ Each object in the `wifiList` array contains:
 
 Retrieves comprehensive WiFi network details.
 
-**Platform Support:** Android, iOS (Limited details on iOS)
+**Platform Support:** Android, iOS (iOS requires extra setup - see "iOS Requirements" below)
 
 #### Example
 
@@ -96,12 +96,48 @@ WifiPlugin.getAllWifiDetails().then(details => {
 
 **Response Fields:**
 
-- `ssid` (string): Current network SSID.
-- `bssid` (string): Network BSSID.
-- `ip` (string): Device IP address in the network.
-- `mac` (string, Android only): Device MAC address.
-- `signalStrength` (number, Android only): WiFi signal strength.
+- `ssid` / `SSID` (string): Current network SSID. Lowercase key on Android, capitalized on iOS (pre-existing per-platform convention; not changed here).
+- `bssid` / `BSSID` (string): Network BSSID.
+- `ip` / `IP` (string): Device IP address in the network.
+- `mac` / `MAC` (string, Android only): Device MAC address. Always `"Unavailable"` on iOS (not exposed by any public API).
+- `signalstrength` / `SignalStrength` (number): **Different scale per platform.** Android returns the raw RSSI in dBm (e.g. `-45`). iOS (1.1.0+) returns `NEHotspotNetwork.signalStrength`, normalized `0.0`-`1.0`. Don't compare the two directly.
+- `isSecure` (boolean, **iOS only, added in 1.1.0**): Whether the current network uses security (WEP/WPA/WPA2/WPA3), from `NEHotspotNetwork.isSecure`. Not present on Android.
+- `reason` (string, **iOS only, added in 1.1.0**): Empty string on success. When the fields above fall back to `"Unavailable"`/`-1`, one of: `location_denied`, `location_restricted`, `location_services_disabled`, `no_wifi_or_entitlement`. Not present on Android.
 - Additional network details may include `networkid`, `linkspeed`, `rssi`, etc., with availability varying between platforms.
+
+### iOS Requirements (SSID/BSSID, added in 1.1.0)
+
+Reading the real SSID/BSSID on iOS needs three things the **consuming app** must provide — a
+plugin cannot grant any of them on its own:
+
+1. **The "Access WiFi Information" capability on the App ID.** In the Apple Developer portal
+   (Certificates, Identifiers & Profiles > Identifiers > your App ID), enable **Access WiFi
+   Information**, then regenerate/download the provisioning profile used to sign the app.
+   This plugin's `plugin.xml` writes the `com.apple.developer.networking.wifi-info`
+   entitlement key into the generated Xcode project's `Entitlements-Debug.plist` /
+   `Entitlements-Release.plist`, and links `NetworkExtension.framework` - but the entitlement
+   is only *honored* by Apple's signing/provisioning if the capability is also turned on for
+   that App ID. Without it, `getAllWifiDetails` returns `"Unavailable"` with
+   `reason: "no_wifi_or_entitlement"` even on a real device connected to Wi-Fi.
+2. **Foreground ("When In Use") location authorization.** As of 1.1.0, `getAllWifiDetails`
+   requests this itself the first time it's called if the status is not yet determined (via
+   `CLLocationManager`), and waits for the user's answer before resolving - it no longer
+   assumes an earlier `getIpInfo()` call already prompted. If the user denies it, the result
+   resolves (it does not reject) with `"Unavailable"` fields and `reason: "location_denied"`
+   (or `location_restricted` / `location_services_disabled`).
+3. **The app must be in the foreground (or recently so).** `NEHotspotNetwork` only returns data
+   while the hosting app is active; it will not resolve a real network in the background.
+
+The two `NSLocation*UsageDescription` strings in `Info.plist` are still added by this plugin as
+before.
+
+**Implementation note:** SSID/BSSID/`signalStrength`/`isSecure` are read via
+`NEHotspotNetwork.fetchCurrentWithCompletionHandler:` (iOS 14+), replacing the deprecated
+`CNCopyCurrentNetworkInfo`, which Apple has progressively stopped returning data for (notably
+on iOS 26). The deprecated API is kept ONLY as a fallback for apps whose own deployment target
+is below iOS 14 (cordova-ios 8's own project template defaults to iOS 13.0 unless the app sets
+a higher `<preference name="deployment-target">`); on iOS 14+ apps the deprecated path is never
+called.
 
 ### isWifiEnabled (Android Only)
 

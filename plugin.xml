@@ -2,7 +2,7 @@
 
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
         id="community-cordova-plugin-wifi"
-        version="1.0.14">
+        version="1.1.0">
     <name>Cordova Plugin Wifi</name>
     <description></description>
     <license>MIT</license>
@@ -57,6 +57,25 @@
         <config-file target="App/App-Info.plist" parent="NSLocationAlwaysAndWhenInUseUsageDescription">
             <string>Your location is used to access WiFi information even when the app is in the background.</string>
         </config-file>
+
+        <!--
+          NEHotspotNetwork (used to read SSID/BSSID/signalStrength/isSecure) requires the
+          "Access WiFi Information" entitlement. This config-file writes the entitlement key
+          into the generated project's Entitlements plists, but a plugin CANNOT grant the
+          capability itself: the consuming app's App ID must also have "Access WiFi
+          Information" enabled in the Apple Developer portal (Certificates, Identifiers &
+          Profiles > the app's App ID > Capabilities), and the matching provisioning
+          profile/signing must be regenerated. Without that, SSID/BSSID stay "Unavailable"
+          even though the entitlement key is present in the built app - see README.
+        -->
+        <config-file target="App/Entitlements-Debug.plist" parent="com.apple.developer.networking.wifi-info">
+            <true/>
+        </config-file>
+        <config-file target="App/Entitlements-Release.plist" parent="com.apple.developer.networking.wifi-info">
+            <true/>
+        </config-file>
+
+        <framework src="NetworkExtension.framework" />
 
         <header-file src="src/ios/WifiPlugin.h" />
         <source-file src="src/ios/WifiPlugin.m" />

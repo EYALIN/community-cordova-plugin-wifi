@@ -45,6 +45,17 @@ export interface WifiDetails {
     channel: number;
     dns1: string;
     dns2: string;
+    /**
+     * iOS only (NEHotspotNetwork.isSecure). Whether the current Wi-Fi network uses security
+     * (WEP/WPA/WPA2/WPA3). Not populated on Android.
+     */
+    isSecure?: boolean;
+    /**
+     * Machine-readable reason when the fields above are "Unavailable"/-1, e.g.
+     * "location_denied" | "location_restricted" | "location_services_disabled" |
+     * "no_wifi_or_entitlement". iOS only; empty string when details were retrieved.
+     */
+    reason?: string;
 }
 
 

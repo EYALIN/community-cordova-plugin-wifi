@@ -4,6 +4,7 @@
 #import <CoreLocation/CoreLocation.h>
 #import <SystemConfiguration/CaptiveNetwork.h>
 #import <Network/Network.h>
+#import <NetworkExtension/NetworkExtension.h>
 #import <SystemConfiguration/SystemConfiguration.h>
 #import <netinet/in.h>
 
@@ -11,6 +12,7 @@
 
 @property (strong, nonatomic) CLLocationManager *locationManager;
 @property (strong, nonatomic) CDVInvokedUrlCommand *currentCommand;
+@property (strong, nonatomic) NSMutableArray<void (^)(BOOL authorized, NSString *reason)> *pendingAuthorizationCallbacks;
 
 @end
 
@@ -20,6 +22,7 @@
     self.locationManager = [[CLLocationManager alloc] init];
     self.locationManager.delegate = self;
     self.locationManager.desiredAccuracy = kCLLocationAccuracyBest;
+    self.pendingAuthorizationCallbacks = [NSMutableArray array];
 }
 
 
@@ -121,73 +124,108 @@
 }
 
 
+#pragma mark - getAllWifiDetails (NEHotspotNetwork, self-requesting authorization)
+
 - (void)getAllWifiDetails:(CDVInvokedUrlCommand*)command {
-    // Assuming location permissions are handled as before
-    NSDictionary *networkInfo = [self fetchSSIDInfo];
-    NSString *ipAddress = [self getIPAddress];
+    [self ensureLocationAuthorizationWithCompletion:^(BOOL authorized, NSString *reason) {
+        if (!authorized) {
+            [self sendWifiDetailsUnavailable:command reason:reason ?: @"location_unavailable"];
+            return;
+        }
+        [self fetchSSIDInfoWithCompletion:^(NSDictionary *networkInfo) {
+            if (!networkInfo) {
+                // No current Wi-Fi association, no "Access WiFi Information" entitlement on the
+                // consuming app, or (pre-iOS 14) the deprecated CaptiveNetwork API returned nothing.
+                [self sendWifiDetailsUnavailable:command reason:@"no_wifi_or_entitlement"];
+                return;
+            }
 
+            NSString *ipAddress = [self getIPAddress];
+            NSDictionary *wifiDetails = @{
+                @"isWifiEnabled": @YES,
+                @"isSupportWifi": @YES,
+                @"SSID": networkInfo[@"SSID"] ?: @"Unavailable",
+                @"BSSID": networkInfo[@"BSSID"] ?: @"Unavailable",
+                @"IP": ipAddress ?: @"Unavailable",
+                @"MAC": @"Unavailable", // Not accessible on iOS
+                @"NetworkID": @-1, // Not applicable
+                @"LinkSpeed": @-1, // Not accessible
+                // Normalized 0.0-1.0 (NEHotspotNetwork.signalStrength). NOT the same scale as
+                // Android's dBm-based "signalstrength" — see README.
+                @"SignalStrength": networkInfo[@"signalStrength"] ?: @-1,
+                @"Gateway": @"Unavailable", // Not directly accessible
+                @"RSSI": @-1, // Not directly accessible
+                @"Speed": @-1, // Not directly accessible
+                @"Frequency": @-1, // Not directly accessible
+                @"Channel": @-1, // Not directly accessible
+                @"DNS1": @"Unavailable", // Not directly accessible
+                @"DNS2": @"Unavailable", // Not directly accessible
+                @"isSecure": networkInfo[@"isSecure"] ?: @NO, // additive, iOS only (NEHotspotNetwork)
+                @"reason": @"", // additive, machine-readable reason when Unavailable
+            };
+
+            CDVPluginResult *result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:wifiDetails];
+            [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+        }];
+    }];
+}
+
+- (void)sendWifiDetailsUnavailable:(CDVInvokedUrlCommand *)command reason:(NSString *)reason {
     NSDictionary *wifiDetails = @{
-        @"isWifiEnabled": @([self isConnectedToWiFi]), // Placeholder; actual implementation may vary
+        @"isWifiEnabled": @NO,
         @"isSupportWifi": @YES,
-        @"SSID": networkInfo[@"SSID"] ?: @"Unavailable",
-        @"BSSID": networkInfo[@"BSSID"] ?: @"Unavailable",
-        @"IP": ipAddress ?: @"Unavailable",
-        @"MAC": @"Unavailable", // Not accessible on iOS
-        @"NetworkID": @-1, // Not applicable
-        @"LinkSpeed": @-1, // Not accessible
-        @"SignalStrength": @-1, // Not directly accessible; could use RSSI if available
-        @"Gateway": @"Unavailable", // Not directly accessible
-        @"RSSI": @-1, // Could parse from networkInfo if available
-        @"Speed": @-1, // Not directly accessible
-        @"Frequency": @-1, // Not directly accessible
-        @"Channel": @-1, // Not directly accessible
-        @"DNS1": @"Unavailable", // Not directly accessible
-        @"DNS2": @"Unavailable", // Not directly accessible
+        @"SSID": @"Unavailable",
+        @"BSSID": @"Unavailable",
+        @"IP": [self getIPAddress] ?: @"Unavailable",
+        @"MAC": @"Unavailable",
+        @"NetworkID": @-1,
+        @"LinkSpeed": @-1,
+        @"SignalStrength": @-1,
+        @"Gateway": @"Unavailable",
+        @"RSSI": @-1,
+        @"Speed": @-1,
+        @"Frequency": @-1,
+        @"Channel": @-1,
+        @"DNS1": @"Unavailable",
+        @"DNS2": @"Unavailable",
+        @"isSecure": @NO,
+        @"reason": reason ?: @"unavailable",
     };
-
     CDVPluginResult *result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:wifiDetails];
     [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
 }
 
 
+#pragma mark - getIpInfo
+
 - (void)getIpInfo:(CDVInvokedUrlCommand*)command {
     self.currentCommand = command;
 
-if ([CLLocationManager authorizationStatus] == kCLAuthorizationStatusNotDetermined) {
-        [self.locationManager requestWhenInUseAuthorization];
-    } else if ([CLLocationManager authorizationStatus] == kCLAuthorizationStatusAuthorizedWhenInUse ||
-               [CLLocationManager authorizationStatus] == kCLAuthorizationStatusAuthorizedAlways) {
-        // Location permissions are granted, proceed to fetch WiFi details
-    } else {
-        // Handle case where location permissions are denied
-         [self sendError:@"Location services are not enabled." toCommand:command];
-    }
-
-    // Check for Location Services
-    if ([CLLocationManager locationServicesEnabled]) {
-        [self.locationManager requestWhenInUseAuthorization];
+    [self ensureLocationAuthorizationWithCompletion:^(BOOL authorized, NSString *reason) {
+        if (!authorized) {
+            [self sendError:[self locationErrorMessageForReason:reason] toCommand:command];
+            return;
+        }
+        if (![CLLocationManager locationServicesEnabled]) {
+            [self sendError:@"Location request services are not enabled." toCommand:command];
+            return;
+        }
         [self.locationManager startUpdatingLocation];
-    } else {
-        // Location services are not enabled. Return error or default data.
-        [self sendError:@"Location request services are not enabled." toCommand:command];
-    }
+    }];
 }
+
+- (NSString *)locationErrorMessageForReason:(NSString *)reason {
+    if ([reason isEqualToString:@"location_denied"]) {
+        return @"Location services are not enabled.";
+    }
+    if ([reason isEqualToString:@"location_restricted"]) {
+        return @"Location services are restricted.";
+    }
+    return @"Location request services are not enabled.";
+}
+
 
 #pragma mark - CLLocationManagerDelegate
-- (BOOL)isConnectedToWiFi {
-    NSArray *interfaceNames = CFBridgingRelease(CNCopySupportedInterfaces());
-    if (!interfaceNames) {
-        return NO;
-    }
-
-    NSDictionary *networkInfo;
-    for (NSString *interfaceName in interfaceNames) {
-        networkInfo = CFBridgingRelease(CNCopyCurrentNetworkInfo((__bridge CFStringRef)interfaceName));
-        if (networkInfo && [networkInfo count]) { break; }
-    }
-
-    return (networkInfo != nil);
-}
 
 - (void)locationManager:(CLLocationManager *)manager didUpdateLocations:(NSArray<CLLocation *> *)locations {
     [self.locationManager stopUpdatingLocation]; // Stop location updates to conserve battery life
@@ -199,6 +237,79 @@ if ([CLLocationManager authorizationStatus] == kCLAuthorizationStatusNotDetermin
 - (void)locationManager:(CLLocationManager *)manager didFailWithError:(NSError *)error {
     [self sendError:@"Failed to get location." toCommand:self.currentCommand];
 }
+
+// iOS 14+ delegate callback for authorization changes.
+- (void)locationManagerDidChangeAuthorization:(CLLocationManager *)manager API_AVAILABLE(ios(14.0)) {
+    [self drainPendingAuthorizationCallbacksWithStatus:manager.authorizationStatus];
+}
+
+// Pre-iOS 14 delegate callback. Only acts when the iOS 14+ callback above isn't the one firing.
+- (void)locationManager:(CLLocationManager *)manager didChangeAuthorizationStatus:(CLAuthorizationStatus)status {
+    if (@available(iOS 14.0, *)) {
+        return;
+    }
+    [self drainPendingAuthorizationCallbacksWithStatus:status];
+}
+
+
+#pragma mark - Location authorization (self-requesting)
+
+// Resolves immediately if authorization is already decided; otherwise requests
+// "When In Use" authorization and queues the completion to run once the user answers.
+- (void)ensureLocationAuthorizationWithCompletion:(void (^)(BOOL authorized, NSString *reason))completion {
+    CLAuthorizationStatus status = [CLLocationManager authorizationStatus];
+
+    switch (status) {
+        case kCLAuthorizationStatusAuthorizedWhenInUse:
+        case kCLAuthorizationStatusAuthorizedAlways:
+            completion(YES, nil);
+            return;
+        case kCLAuthorizationStatusDenied:
+            completion(NO, @"location_denied");
+            return;
+        case kCLAuthorizationStatusRestricted:
+            completion(NO, @"location_restricted");
+            return;
+        case kCLAuthorizationStatusNotDetermined:
+        default:
+            break;
+    }
+
+    if (![CLLocationManager locationServicesEnabled]) {
+        completion(NO, @"location_services_disabled");
+        return;
+    }
+
+    @synchronized (self.pendingAuthorizationCallbacks) {
+        [self.pendingAuthorizationCallbacks addObject:[completion copy]];
+    }
+    [self.locationManager requestWhenInUseAuthorization];
+}
+
+- (void)drainPendingAuthorizationCallbacksWithStatus:(CLAuthorizationStatus)status {
+    if (status == kCLAuthorizationStatusNotDetermined) {
+        return; // still waiting on the user
+    }
+
+    NSArray<void (^)(BOOL, NSString *)> *callbacks;
+    @synchronized (self.pendingAuthorizationCallbacks) {
+        callbacks = [self.pendingAuthorizationCallbacks copy];
+        [self.pendingAuthorizationCallbacks removeAllObjects];
+    }
+    if (callbacks.count == 0) {
+        return;
+    }
+
+    BOOL authorized = (status == kCLAuthorizationStatusAuthorizedWhenInUse || status == kCLAuthorizationStatusAuthorizedAlways);
+    NSString *reason = nil;
+    if (!authorized) {
+        reason = (status == kCLAuthorizationStatusDenied) ? @"location_denied" : @"location_restricted";
+    }
+    for (void (^callback)(BOOL, NSString *) in callbacks) {
+        callback(authorized, reason);
+    }
+}
+
 
 #pragma mark - Utility Methods
 
@@ -286,39 +397,75 @@ if ([CLLocationManager authorizationStatus] == kCLAuthorizationStatusNotDetermin
         }
 
         CLPlacemark *placemark = [placemarks firstObject];
-        NSDictionary *networkInfo = [self fetchSSIDInfo];
 
-        NSMutableArray *ipInfos = [NSMutableArray array];
-       NSDictionary *ipInfo = @{
-                   @"type": [self checkConnectionType],
-                   @"signal": @-1, // Not directly accessible
-                   @"speed": @-1, // Not directly accessible
-                   @"ssid": networkInfo[@"SSID"] ?: @"",
-                   @"internalip": [self getIPAddress] ?: @"",
-                   @"macaddress": @"Unavailable", // Not accessible on iOS
-                   @"networkid": @-1, // Not applicable
-                   @"frequency": @-1, // Not directly accessible
-                   @"bssid": networkInfo[@"BSSID"] ?: @"",
-                   @"dns1": @"Unavailable", // Not directly accessible
-                   @"dns2": @"Unavailable", // Not directly accessible
-                   @"timezone": [[NSTimeZone localTimeZone] name],
-                   @"latitude": location ? @(location.coordinate.latitude) : @0,
-                   @"longitude": location ? @(location.coordinate.longitude) : @0,
-                   @"city": placemark.locality ?: @"",
-                   @"street": placemark.thoroughfare ?: @"",
-                   @"country": placemark.country ?: @"",
-                   @"region": placemark.administrativeArea ?: @"",
-                   @"zipcode": placemark.postalCode ?: @"",
-                   @"state": placemark.administrativeArea ?: @"",
-               };
+        [self fetchSSIDInfoWithCompletion:^(NSDictionary *networkInfo) {
+            NSMutableArray *ipInfos = [NSMutableArray array];
+            NSDictionary *ipInfo = @{
+                       @"type": [self checkConnectionType],
+                       @"signal": networkInfo[@"signalStrength"] ?: @-1,
+                       @"speed": @-1, // Not directly accessible
+                       @"ssid": networkInfo[@"SSID"] ?: @"",
+                       @"internalip": [self getIPAddress] ?: @"",
+                       @"macaddress": @"Unavailable", // Not accessible on iOS
+                       @"networkid": @-1, // Not applicable
+                       @"frequency": @-1, // Not directly accessible
+                       @"bssid": networkInfo[@"BSSID"] ?: @"",
+                       @"dns1": @"Unavailable", // Not directly accessible
+                       @"dns2": @"Unavailable", // Not directly accessible
+                       @"timezone": [[NSTimeZone localTimeZone] name],
+                       @"latitude": location ? @(location.coordinate.latitude) : @0,
+                       @"longitude": location ? @(location.coordinate.longitude) : @0,
+                       @"city": placemark.locality ?: @"",
+                       @"street": placemark.thoroughfare ?: @"",
+                       @"country": placemark.country ?: @"",
+                       @"region": placemark.administrativeArea ?: @"",
+                       @"zipcode": placemark.postalCode ?: @"",
+                       @"state": placemark.administrativeArea ?: @"",
+                   };
 
-        [ipInfos addObject:ipInfo];
-        CDVPluginResult *result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:ipInfos];
-        [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+            [ipInfos addObject:ipInfo];
+            CDVPluginResult *result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:ipInfos];
+            [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+        }];
     }];
 }
 
-- (NSDictionary *)fetchSSIDInfo {
+// Modern, async SSID/BSSID lookup. Requires the consuming app to hold the
+// "Access WiFi Information" entitlement (com.apple.developer.networking.wifi-info)
+// AND foreground location authorization; a Cordova plugin cannot grant that
+// entitlement itself (see plugin.xml / README). Falls back to the deprecated
+// CaptiveNetwork API only on deployment targets below iOS 14.
+- (void)fetchSSIDInfoWithCompletion:(void (^)(NSDictionary *networkInfo))completion {
+    if (@available(iOS 14.0, *)) {
+        [NEHotspotNetwork fetchCurrentWithCompletionHandler:^(NEHotspotNetwork * _Nullable network) {
+            if (!network) {
+                completion(nil);
+                return;
+            }
+            NSDictionary *info = @{
+                @"SSID": network.SSID ?: @"Unavailable",
+                @"BSSID": network.BSSID ?: @"Unavailable",
+                @"signalStrength": @(network.signalStrength), // 0.0-1.0
+                @"isSecure": @(network.isSecure),
+            };
+            completion(info);
+        }];
+        return;
+    }
+
+    // Deprecated fallback, only reachable when the consuming app's deployment
+    // target is below iOS 14 (cordova-ios 8's own default is 13.0).
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSDictionary *legacyInfo = [self legacyFetchSSIDInfo];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            completion(legacyInfo);
+        });
+    });
+}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+- (NSDictionary *)legacyFetchSSIDInfo {
     NSArray *interfaceNames = CFBridgingRelease(CNCopySupportedInterfaces());
     NSDictionary *SSIDInfo = nil;
     for (NSString *interfaceName in interfaceNames) {
@@ -329,6 +476,7 @@ if ([CLLocationManager authorizationStatus] == kCLAuthorizationStatusNotDetermin
     }
     return SSIDInfo;
 }
+#pragma clang diagnostic pop
 
 
 - (void)sendError:(NSString *)errorMessage toCommand:(CDVInvokedUrlCommand *)command {
