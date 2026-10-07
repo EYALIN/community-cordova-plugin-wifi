@@ -61,8 +61,8 @@
         <!--
           NEHotspotNetwork (used to read SSID/BSSID/signalStrength/isSecure) requires the
           "Access WiFi Information" entitlement. It is OPT-IN so apps that never read the SSID
-          on iOS don't get an unused capability: install with
-          `--variable WIFI_INFO_ENTITLEMENT=true` and the after_prepare hook writes
+          on iOS don't get an unused capability: install with the WIFI_INFO_ENTITLEMENT variable
+          set to true, and the after_prepare hook writes
           com.apple.developer.networking.wifi-info into Entitlements-Debug/Release.plist.
           The App ID must also have "Access WiFi Information" enabled in the Apple Developer
           portal - a plugin cannot grant the capability itself. See README.

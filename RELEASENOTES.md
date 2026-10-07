@@ -1,6 +1,15 @@
 # Release Notes
 
-## 1.1.0 (2026-10-07)
+## 1.1.0 (2026-10-07, fixed same day)
+
+### Fix: malformed XML comment broke `cordova plugin add` for every consumer
+
+`plugin.xml` had a `<!-- ... -->` comment whose body contained a literal `--variable` token.
+XML forbids `--` anywhere inside a comment, so cordova's XML parser threw `Malformed comment`
+on every `cordova plugin add community-cordova-plugin-wifi@1.1.0`, published and all — nobody
+could install this version. Reworded the comment to avoid the double-hyphen; no functional
+change. **The published 1.1.0 package on npm still has the broken comment** until a patch
+release goes out.
 
 ### iOS: real SSID/BSSID via NEHotspotNetwork ([#2](https://github.com/EYALIN/community-cordova-plugin-wifi/issues/2))
 
