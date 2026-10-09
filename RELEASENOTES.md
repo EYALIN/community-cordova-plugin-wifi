@@ -1,5 +1,14 @@
 # Release Notes
 
+## 1.1.1 (2026-10-09)
+
+### Fix: `cordova plugin add` fails on 1.1.0 with `Malformed comment`
+
+Patch release that ships the `plugin.xml` comment fix described under 1.1.0. The 1.1.0 package on
+npm still contains a `--` sequence inside an XML comment, so cordova cannot parse its `plugin.xml`
+and the install fails. 1.1.1 has a well-formed `plugin.xml` (checked with `xmllint`). There is no
+functional change from 1.1.0. Consumers on 1.1.0 should move to `^1.1.1`.
+
 ## 1.1.0 (2026-10-07, fixed same day)
 
 ### Fix: malformed XML comment broke `cordova plugin add` for every consumer
