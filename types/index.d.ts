@@ -28,6 +28,10 @@ export interface ConnectedDeviceInfo {
     siteLocalAddress: boolean;
 }
 
+/**
+ * Key casing differs per platform: Android returns the lowercase keys below, iOS returns the
+ * capitalised ones (`SSID`, `BSSID`, `IP`, `SignalStrength`, ...), typed here as optional.
+ */
 export interface WifiDetails {
     iswifienabled: boolean;
     issupportwifi: boolean;
@@ -56,6 +60,22 @@ export interface WifiDetails {
      * "no_wifi_or_entitlement". iOS only; empty string when details were retrieved.
      */
     reason?: string;
+    /** iOS key casing (see the note on this interface). */
+    isWifiEnabled?: boolean;
+    isSupportWifi?: boolean;
+    SSID?: string;
+    BSSID?: string;
+    IP?: string;
+    MAC?: string;
+    NetworkID?: number;
+    LinkSpeed?: number;
+    /** iOS: NEHotspotNetwork.signalStrength, 0.0-1.0 (Android's signalstrength is dBm). -1 when unavailable. */
+    SignalStrength?: number;
+    Gateway?: string;
+    RSSI?: number;
+    Speed?: number;
+    Frequency?: number;
+    Channel?: number;
 }
 
 
@@ -69,6 +89,10 @@ export interface PingResponse {
 
 export interface IpInfo {
     type: string;
+    /**
+     * Android: dBm. iOS (1.1.0+): NEHotspotNetwork.signalStrength, normalized 0.0-1.0, or -1 when
+     * unavailable (1.0.x always returned -1 on iOS).
+     */
     signal: number;
     speed: number;
     ssid: string;

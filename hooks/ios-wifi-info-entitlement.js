@@ -13,8 +13,12 @@
  *
  * or, in config.xml: <preference name="WIFI_INFO_ENTITLEMENT" value="true" />
  *
- * When on, the key is written into the project's Entitlements-Debug/Release.plist. When off,
- * the key is removed if present, so turning the variable off takes effect on the next prepare.
+ * or, in config.xml: <plugin name="community-cordova-plugin-wifi"><variable name="WIFI_INFO_ENTITLEMENT" value="true" /></plugin>
+ *
+ * When set to true, the key is written into the project's Entitlements-Debug/Release.plist.
+ * When explicitly set to false, the key is removed if present, so turning the variable off takes
+ * effect on the next prepare. When the variable is not set at all the hook does nothing, so an
+ * entitlement the app adds itself (e.g. through its own <edit-config>) is left alone.
  */
 
 const fs = require('fs');
@@ -28,6 +32,7 @@ function isTrue(value) {
     return String(value).trim().toLowerCase() === 'true';
 }
 
+// Returns true / false when the variable is set, or null when it is not set anywhere.
 function readVariable(projectRoot) {
     // 1. Plugin variable recorded by `cordova plugin add --variable` in package.json.
     try {
@@ -38,16 +43,30 @@ function readVariable(projectRoot) {
         }
     } catch (e) { /* no package.json */ }
 
-    // 2. <preference name="WIFI_INFO_ENTITLEMENT" value="true" /> in config.xml.
+    // 2. config.xml: <variable name="WIFI_INFO_ENTITLEMENT" value="..."/> inside this plugin's
+    //    <plugin> element (written by older cordova-cli --save), then
+    //    <preference name="WIFI_INFO_ENTITLEMENT" value="..."/>. Attribute order and quotes vary.
     try {
         const xml = fs.readFileSync(path.join(projectRoot, 'config.xml'), 'utf8');
-        const m = xml.match(new RegExp('<preference\\s+name="' + VARIABLE + '"\\s+value="([^"]*)"', 'i'));
-        if (m) {
-            return isTrue(m[1]);
-        }
+        const pluginBlock = xml.match(new RegExp('<plugin\\b[^>]*\\bname\\s*=\\s*["\']' + PLUGIN_ID + '["\'][^>]*>([\\s\\S]*?)</plugin>', 'i'));
+        const fromVariable = pluginBlock && valueOf(pluginBlock[1], 'variable');
+        if (fromVariable !== null) return isTrue(fromVariable);
+        const fromPreference = valueOf(xml, 'preference');
+        if (fromPreference !== null) return isTrue(fromPreference);
     } catch (e) { /* no config.xml */ }
 
-    return false;
+    return null;
+}
+
+// The value="" of the first <tag name="WIFI_INFO_ENTITLEMENT" .../> in xml, or null.
+function valueOf(xml, tag) {
+    const tags = xml.match(new RegExp('<' + tag + '\\b[^>]*>', 'gi')) || [];
+    for (const t of tags) {
+        const name = t.match(/\bname\s*=\s*["']([^"']*)["']/i);
+        const value = t.match(/\bvalue\s*=\s*["']([^"']*)["']/i);
+        if (name && name[1] === VARIABLE && value) return value[1];
+    }
+    return null;
 }
 
 function findEntitlementPlists(iosRoot) {
@@ -94,6 +113,7 @@ module.exports = function (context) {
     if (!fs.existsSync(iosRoot)) return;
 
     const enabled = readVariable(projectRoot);
+    if (enabled === null) return; // not set: leave the app's own entitlements untouched
     const plists = findEntitlementPlists(iosRoot);
     plists.forEach((p) => apply(p, enabled));
     if (enabled) {

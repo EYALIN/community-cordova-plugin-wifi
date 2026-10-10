@@ -101,6 +101,7 @@ WifiPlugin.getAllWifiDetails().then(details => {
 - `ip` / `IP` (string): Device IP address in the network.
 - `mac` / `MAC` (string, Android only): Device MAC address. Always `"Unavailable"` on iOS (not exposed by any public API).
 - `signalstrength` / `SignalStrength` (number): **Different scale per platform.** Android returns the raw RSSI in dBm (e.g. `-45`). iOS (1.1.0+) returns `NEHotspotNetwork.signalStrength`, normalized `0.0`-`1.0`. Don't compare the two directly.
+- `getIpInfo()` also changed on iOS in 1.1.0: its `signal` field is now `NEHotspotNetwork.signalStrength` (`0.0`-`1.0`, `-1` when unavailable), where 1.0.x always returned `-1`. Android's `signal` is still dBm.
 - `isSecure` (boolean, **iOS only, added in 1.1.0**): Whether the current network uses security (WEP/WPA/WPA2/WPA3), from `NEHotspotNetwork.isSecure`. Not present on Android.
 - `reason` (string, **iOS only, added in 1.1.0**): Empty string on success. When the fields above fall back to `"Unavailable"`/`-1`, one of: `location_denied`, `location_restricted`, `location_services_disabled`, `no_wifi_or_entitlement`. Not present on Android.
 - Additional network details may include `networkid`, `linkspeed`, `rssi`, etc., with availability varying between platforms.
@@ -120,8 +121,13 @@ plugin cannot grant any of them on its own:
 
    (or add `<preference name="WIFI_INFO_ENTITLEMENT" value="true" />` to `config.xml`). An
    `after_prepare` hook then writes the `com.apple.developer.networking.wifi-info` key into the
-   generated Xcode project's `Entitlements-Debug.plist` / `Entitlements-Release.plist`; with the
-   variable off it removes the key. `NetworkExtension.framework` is always linked (a system
+   generated Xcode project's `Entitlements-Debug.plist` / `Entitlements-Release.plist`. With the
+   variable explicitly `false` it removes the key; with the variable not set at all the hook
+   leaves the plists alone, so an entitlement your app adds itself (e.g. via its own
+   `<edit-config>`) is kept. The variable is read from `package.json` (`cordova.plugins`), from a
+   `<variable>` inside this plugin's `<plugin>` element in `config.xml`, or from a `<preference>`.
+   Removing the plugin does not remove a key it already wrote; run `cordova prepare` with the
+   variable set to `false` first, or delete the key from the plists. `NetworkExtension.framework` is always linked (a system
    framework, no capability needed).
    **Also enable the capability on the App ID.** In the Apple Developer portal (Certificates,
    Identifiers & Profiles > Identifiers > your App ID), enable **Access WiFi Information**, then
